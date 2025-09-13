@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StakeMax Demo</title>
+<style>
+body { font-family:sans-serif; background:#121212; color:#fff; text-align:center; padding:2rem; }
+.container { max-width:400px; margin:auto; background:rgba(0,0,0,0.8); padding:2rem; border-radius:15px; box-shadow:0 0 15px #ffd700; }
+h1,h2,h3 { color: #ffd700; }
+button { padding:0.7rem 1.5rem; margin:0.5rem; cursor:pointer; border-radius:10px; border:none; background:gold; color:#000; font-weight:bold; }
+input { padding:0.5rem; margin:0.5rem 0; border-radius:5px; border:none; width:100%; }
+.games-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1rem; margin-top:1rem; }
+.game-card { background:rgba(255,215,0,0.1); padding:1rem; border-radius:10px; cursor:pointer; transition:0.2s; }
+.game-card:hover { background:rgba(255,215,0,0.2); }
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1rem; margin-top:1rem; }
+.stat-card { background:rgba(255,215,0,0.1); padding:1rem; border-radius:10px; }
+.disclaimer { background:rgba(255,215,0,0.1); padding:1rem; border-radius:10px; margin-top:1rem; font-size:0.9rem; color:#fff; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN / SIGNUP -->
+<div id="loginSection" class="container">
+    <h1>StakeMax Demo</h1>
+    <h3>Login</h3>
+    <input id="loginEmail" type="email" placeholder="Email">
+    <input id="loginPass" type="password" placeholder="Password">
+    <button id="loginBtn">Login</button>
+
+    <h3>Sign Up</h3>
+    <input id="signupUsername" type="text" placeholder="Username">
+    <input id="signupEmail" type="email" placeholder="Email">
+    <input id="signupPass" type="password" placeholder="Password">
+    <button id="signupBtn">Sign Up</button>
+
+    <div class="disclaimer">
+        ⚠️ This is a demo gambling site with **fake currency** for entertainment purposes only. Do not gamble real money here.
+    </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" style="display:none">
+    <div class="container">
+        <h2>Welcome, <span id="username"></span></h2>
+        <h3>Balance: <span id="balance">0</span></h3>
+        <input id="betAmount" type="number" value="100">
+        <button id="betBtn">Place Bet</button>
+        <button onclick="logout()">Logout</button>
+
+        <h2>Games</h2>
+        <div class="games-grid">
+            <div class="game-card" onclick="playGame('slots')">🎰 Slots</div>
+            <div class="game-card" onclick="playGame('blackjack')">🃏 Blackjack</div>
+            <div class="game-card" onclick="playGame('roulette')">🎲 Roulette</div>
+            <div class="game-card" onclick="playGame('poker')">♠️ Poker</div>
+            <div class="game-card" onclick="playGame('dice')">🎯 Dice</div>
+            <div class="game-card" onclick="playGame('crash')">🚀 Crash</div>
+        </div>
+
+        <h2>Live Stats</h2>
+        <div class="stats-grid">
+            <div class="stat-card">Total Bets: <span id="totalBets">0</span></div>
+            <div class="stat-card">Biggest Win: <span id="biggestWin">0</span></div>
+            <div class="stat-card">Jackpot: <span id="jackpot">0</span></div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+let currentUser = null;
+let currentProfile = null;
+
+async function signup() {
+    const username = document.getElementById('signupUsername').value;
+    const email = document.getElementById('signupEmail').value;
+    const password = document.getElementById('signupPass').value;
+
+    const res = await fetch('/signup', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ username, email, password })
+    });
+    const data = await res.json();
+    alert(data.message || data.error);
+}
+
+async function login() {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPass').value;
+
+    const res = await fetch('/login', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if(data.error) { alert(data.error); return; }
+    currentUser = data.user;
+    await loadProfile();
+    showDashboard();
+}
+
+async function loadProfile() {
+    const res = await fetch(`/profile/${currentUser.id}`);
+    currentProfile = await res.json();
+    document.getElementById('balance').textContent = '$' + currentProfile.money;
+    document.getElementById('username').textContent = currentProfile.username;
+}
+
+async function placeBet() {
+    const betAmount = parseInt(document.getElementById('betAmount').value);
+    const res = await fetch(`/bet/${currentUser.id}`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ betAmount })
+    });
+    const data = await res.json();
+    if(data.error) { alert(data.error); return; }
+    currentProfile.money += data.change;
+    document.getElementById('balance').textContent = '$' + currentProfile.money;
+    updateStats();
+}
+
+async function updateStats() {
+    const res = await fetch(`/profile/${currentUser.id}`);
+    currentProfile = await res.json();
+    document.getElementById('totalBets').textContent = currentProfile.wins + currentProfile.losses;
+    document.getElementById('biggestWin').textContent = '$' + currentProfile.biggestWin;
+    document.getElementById('jackpot').textContent = '$' + currentProfile.jackpot;
+}
+
+function playGame(gameType) {
+    const messages = {
+        'slots':'Spin those reels!',
+        'blackjack':'Beat the dealer!',
+        'roulette':'Place your bets!',
+        'poker':'May the best hand win!',
+        'dice':'Simple and exciting!',
+        'crash':'How high will you go?'
+    }
+    alert(messages[gameType] || 'Welcome to the game!')
+}
+
+function showDashboard() {
+    document.getElementById('loginSection').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+}
+
+function logout() {
+    currentUser=null;
+    currentProfile=null;
+    document.getElementById('dashboard').style.display='none';
+    document.getElementById('loginSection').style.display='block';
+}
+
+document.getElementById('loginBtn').addEventListener('click', login);
+document.getElementById('signupBtn').addEventListener('click', signup);
+document.getElementById('betBtn').addEventListener('click', placeBet);
+</script>
+
+</body>
+</html>
