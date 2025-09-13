@@ -30,11 +30,13 @@ async function signup() {
     const email = document.getElementById('signupEmail').value
     const password = document.getElementById('signupPass').value
     const username = document.getElementById('signupUsername').value
+    const age = parseInt(document.getElementById('signupAge').value)
+
+    if (age < 18) { alert('You must be 18 or older to use this site.'); return }
 
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) { alert(error.message); return }
 
-    // Create profile with starting balance $10,000
     await supabase.from('profiles').insert([{ id: data.user.id, username, money: 10000, wins:0, losses:0 }])
     alert('Account created! Please log in.')
 }
@@ -76,7 +78,6 @@ async function placeBet(gameType) {
     const multiplier = win ? Math.random() * 3 + 1 : 0
     const change = win ? Math.floor(betAmount * multiplier) - betAmount : -betAmount
 
-    // Update profile
     await supabase.from('profiles')
         .update({ money: currentProfile.money + change, wins: currentProfile.wins + (win?1:0), losses: currentProfile.losses + (!win?1:0) })
         .eq('id', currentUser.id)
@@ -138,52 +139,75 @@ window.addEventListener('load', checkAuth)
 </script>
 <style>
 body { font-family:sans-serif; background:#121212; color:#fff; text-align:center; padding:2rem; }
+.container { max-width:400px; margin:auto; background:rgba(0,0,0,0.8); padding:2rem; border-radius:15px; box-shadow:0 0 15px #ffd700; }
+h1,h2,h3 { color: #ffd700; }
 button { padding:0.7rem 1.5rem; margin:0.5rem; cursor:pointer; border-radius:10px; border:none; background:gold; color:#000; font-weight:bold; }
-input { padding:0.5rem; margin:0.5rem; border-radius:5px; border:none; width:200px; }
+input { padding:0.5rem; margin:0.5rem 0; border-radius:5px; border:none; width:100%; }
 .games-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1rem; margin-top:1rem; }
 .game-card { background:rgba(255,215,0,0.1); padding:1rem; border-radius:10px; cursor:pointer; transition:0.2s; }
 .game-card:hover { background:rgba(255,215,0,0.2); }
 .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1rem; margin-top:1rem; }
 .stat-card { background:rgba(255,215,0,0.1); padding:1rem; border-radius:10px; }
+.disclaimer { background:rgba(255,215,0,0.1); padding:1rem; border-radius:10px; margin-top:1rem; font-size:0.9rem; color:#fff; }
 </style>
 </head>
 <body>
 
-<div id="loginSection">
-    <h2>Login</h2>
-    <input id="loginEmail" type="email" placeholder="Email"><br>
-    <input id="loginPass" type="password" placeholder="Password"><br>
-    <button onclick="login()">Login</button>
-    <h2>Sign Up</h2>
-    <input id="signupUsername" type="text" placeholder="Username"><br>
-    <input id="signupEmail" type="email" placeholder="Email"><br>
-    <input id="signupPass" type="password" placeholder="Password"><br>
-    <button onclick="signup()">Sign Up</button>
+<!-- LOGIN / SIGNUP -->
+<div id="loginSection" class="container">
+    <h1>StakeMax Demo</h1>
+    <h3>Login</h3>
+    <input id="loginEmail" type="email" placeholder="Email">
+    <input id="loginPass" type="password" placeholder="Password">
+    <button id="loginBtn">Login</button>
+
+    <h3>Sign Up</h3>
+    <input id="signupUsername" type="text" placeholder="Username">
+    <input id="signupEmail" type="email" placeholder="Email">
+    <input id="signupPass" type="password" placeholder="Password">
+    <input id="signupAge" type="number" placeholder="Age">
+    <button id="signupBtn">Sign Up</button>
+
+    <div class="disclaimer">
+        ⚠️ By signing up, you confirm you are at least 18 years old. This is a **demo gambling site** with fake currency for entertainment purposes only. Do not gamble real money here.
+    </div>
 </div>
 
+<!-- DASHBOARD -->
 <div id="dashboard" style="display:none">
-    <h1>Welcome, <span id="username"></span></h1>
-    <h2>Balance: <span id="balance">0</span></h2>
-    <input id="betAmount" type="number" value="100"><button onclick="placeBet()">Place Bet</button>
-    <button onclick="logout()">Logout</button>
+    <div class="container">
+        <h2>Welcome, <span id="username"></span></h2>
+        <h3>Balance: <span id="balance">0</span></h3>
+        <input id="betAmount" type="number" value="100"><button onclick="placeBet()">Place Bet</button>
+        <button onclick="logout()">Logout</button>
 
-    <h2>Games</h2>
-    <div class="games-grid">
-        <div class="game-card" onclick="playGame('slots')">🎰 Slots</div>
-        <div class="game-card" onclick="playGame('blackjack')">🃏 Blackjack</div>
-        <div class="game-card" onclick="playGame('roulette')">🎲 Roulette</div>
-        <div class="game-card" onclick="playGame('poker')">♠️ Poker</div>
-        <div class="game-card" onclick="playGame('dice')">🎯 Dice</div>
-        <div class="game-card" onclick="playGame('crash')">🚀 Crash</div>
-    </div>
+        <h2>Games</h2>
+        <div class="games-grid">
+            <div class="game-card" onclick="playGame('slots')">🎰 Slots</div>
+            <div class="game-card" onclick="playGame('blackjack')">🃏 Blackjack</div>
+            <div class="game-card" onclick="playGame('roulette')">🎲 Roulette</div>
+            <div class="game-card" onclick="playGame('poker')">♠️ Poker</div>
+            <div class="game-card" onclick="playGame('dice')">🎯 Dice</div>
+            <div class="game-card" onclick="playGame('crash')">🚀 Crash</div>
+        </div>
 
-    <h2>Live Stats</h2>
-    <div class="stats-grid">
-        <div class="stat-card">Total Bets: <span id="totalBets">0</span></div>
-        <div class="stat-card">Biggest Win: <span id="biggestWin">0</span></div>
-        <div class="stat-card">Jackpot: <span id="jackpot">0</span></div>
+        <h2>Live Stats</h2>
+        <div class="stats-grid">
+            <div class="stat-card">Total Bets: <span id="totalBets">0</span></div>
+            <div class="stat-card">Biggest Win: <span id="biggestWin">0</span></div>
+            <div class="stat-card">Jackpot: <span id="jackpot">0</span></div>
+        </div>
+
+        <div class="disclaimer">
+            ⚠️ Demo site only. No real gambling occurs here. All currency is fake.
+        </div>
     </div>
 </div>
+
+<script>
+document.getElementById('loginBtn').addEventListener('click', login)
+document.getElementById('signupBtn').addEventListener('click', signup)
+</script>
 
 </body>
 </html>
