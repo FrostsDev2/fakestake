@@ -16,6 +16,11 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // --- SIGNUP ---
 app.post('/signup', async (req, res) => {
   const { username, email, password } = req.body;
+
+  if (!username || !email || !password) {
+    return res.status(400).json({ error: 'Missing fields' });
+  }
+
   try {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) return res.status(400).json({ error: error.message });
@@ -30,9 +35,10 @@ app.post('/signup', async (req, res) => {
       jackpot: 10000
     }]);
 
-    res.json({ message: 'Account created successfully' });
+    return res.json({ message: 'Account created successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.log('Signup error:', err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -42,9 +48,10 @@ app.post('/login', async (req, res) => {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return res.status(400).json({ error: error.message });
-    res.json({ user: data.user });
+    return res.json({ user: data.user });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.log('Login error:', err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -53,9 +60,10 @@ app.get('/profile/:id', async (req, res) => {
   try {
     const { data, error } = await supabase.from('profiles').select('*').eq('id', req.params.id).single();
     if (error) return res.status(400).json({ error: error.message });
-    res.json(data);
+    return res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.log('Profile fetch error:', err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -84,15 +92,15 @@ app.post('/bet/:id', async (req, res) => {
       jackpot
     }).eq('id', req.params.id);
 
-    res.json({ change, win });
+    return res.json({ change, win });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.log('Bet error:', err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
-// --- Serve frontend for all other routes ---
+// --- Serve frontend ---
 app.get('*', (req,res)=>res.sendFile('index.html', { root: 'public' }));
 
-// --- Start server ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
