@@ -6,9 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
-
-// Serve frontend
-app.use(express.static('public'));
+app.use(express.static('public')); // serve frontend
 
 // --- Supabase setup ---
 const SUPABASE_URL = 'https://oljmrzfgknkqyrwteegi.supabase.co';
@@ -22,7 +20,16 @@ app.post('/signup', async (req, res) => {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) return res.status(400).json({ error: error.message });
 
-    await supabase.from('profiles').insert([{ id: data.user.id, username, money: 10000, wins: 0, losses: 0, biggestWin: 0, jackpot: 10000 }]);
+    await supabase.from('profiles').insert([{
+      id: data.user.id,
+      username,
+      money: 10000,
+      wins: 0,
+      losses: 0,
+      biggestWin: 0,
+      jackpot: 10000
+    }]);
+
     res.json({ message: 'Account created successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -59,24 +66,22 @@ app.post('/bet/:id', async (req, res) => {
     const { data, error } = await supabase.from('profiles').select('*').eq('id', req.params.id).single();
     if (error) return res.status(400).json({ error: error.message });
 
-    let currentMoney = data.money;
-    if (betAmount > currentMoney) return res.status(400).json({ error: 'Insufficient balance' });
+    if (betAmount > data.money) return res.status(400).json({ error: 'Insufficient balance' });
 
     const win = Math.random() < 0.45;
     const multiplier = win ? Math.random() * 3 + 1 : 0;
     const change = win ? Math.floor(betAmount * multiplier) - betAmount : -betAmount;
-
     let newBiggestWin = data.biggestWin;
     if (win && (change + betAmount > newBiggestWin)) newBiggestWin = change + betAmount;
 
     const jackpot = data.jackpot + Math.floor(Math.random() * 1000) + 100;
 
     await supabase.from('profiles').update({
-      money: currentMoney + change,
+      money: data.money + change,
       wins: data.wins + (win ? 1 : 0),
       losses: data.losses + (!win ? 1 : 0),
       biggestWin: newBiggestWin,
-      jackpot: jackpot
+      jackpot
     }).eq('id', req.params.id);
 
     res.json({ change, win });
@@ -84,6 +89,9 @@ app.post('/bet/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// --- Serve frontend for all other routes ---
+app.get('*', (req,res)=>res.sendFile('index.html', { root: 'public' }));
 
 // --- Start server ---
 const PORT = process.env.PORT || 3000;
